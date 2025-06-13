@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+prophet
+pandas
+requests
+joblib
+pydantic
+python-multipart
