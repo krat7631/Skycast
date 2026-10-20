@@ -14,6 +14,9 @@ const METHODS = [
 ] as const;
 const NWP_COLOR = "#F2A65A";
 
+// Round to a whole percent without printing "-0%" for tiny negative values.
+const pct = (fraction: number) => `${Math.round(fraction * 100) || 0}%`;
+
 export function SkillView({ report }: { report: BacktestReport }) {
   const [index, setIndex] = useState(0);
   const city = report.cities[index];
@@ -61,7 +64,7 @@ export function SkillView({ report }: { report: BacktestReport }) {
       <p className="note">
         Each year {years} was forecast day by day by a model trained only on earlier years
         ({city.history.days.toLocaleString()} days of history from {city.history.start}). Skill above 0% means better
-        than climatology. The NWP point uses archived operational forecasts from {city.nwp_lead1?.years[0] ?? "2022"}
+        than climatology. The NWP point uses archived operational forecasts from {city.nwp_lead1?.years[0] ?? "2022"}{" "}
         on, which are stitched from each day&apos;s latest model run, so it is a ≤1-day-ahead comparison.
       </p>
 
@@ -84,8 +87,8 @@ export function SkillView({ report }: { report: BacktestReport }) {
                 <td className="num mono">{c.methods.gbm[1].mae_tmax.toFixed(2)}°</td>
                 <td className="num mono">{c.nwp_lead1 ? `${c.nwp_lead1.mae_tmax.toFixed(2)}°` : "—"}</td>
                 <td className="num mono">{c.methods.climatology[1].mae_tmax.toFixed(2)}°</td>
-                <td className="num mono">{(c.methods.gbm[1].skill_tmax * 100).toFixed(0)}%</td>
-                <td className="num mono">{(c.methods.gbm[7].skill_tmax * 100).toFixed(0)}%</td>
+                <td className="num mono">{pct(c.methods.gbm[1].skill_tmax)}</td>
+                <td className="num mono">{pct(c.methods.gbm[7].skill_tmax)}</td>
               </tr>
             ))}
           </tbody>

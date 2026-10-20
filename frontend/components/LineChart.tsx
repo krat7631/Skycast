@@ -17,7 +17,7 @@ type Props = {
 };
 
 const W = 720;
-const PAD = { left: 48, right: 16, top: 16, bottom: 32 };
+const PAD = { left: 64, right: 16, top: 16, bottom: 32 };
 
 export function LineChart({ series, xLabels, yLabel, height = 260, highlightFrom, highlightLabel, ariaLabel }: Props) {
   const all = series.flatMap((s) => s.points).filter((p): p is { x: number; y: number } => p.y !== null);
