@@ -1,4 +1,15 @@
 node_modules
 .next
 .env
+.env.local
 *.log
+logs/
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.tsbuildinfo
+next-env.d.ts
+
+# Downloaded weather data and trained models (regenerated on demand)
+backend/data/
