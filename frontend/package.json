@@ -1,21 +1,22 @@
 {
   "name": "skycast-frontend",
-  "version": "1.0.0",
+  "version": "2.0.0",
+  "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "sh -c 'mkdir -p .next && exec node --localstorage-file=\"$PWD/.next/dev-localstorage.json\" ./node_modules/next/dist/bin/next dev'",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "autoprefixer": "^10.4.0",
-    "next": "14.2.3",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "tailwindcss": "^4.0.0",
-    "framer-motion": "^11.0.0"
+    "next": "15.3.3",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
   },
   "devDependencies": {
-    "postcss": "^8.4.0",
-    "typescript": "^5.0.0"
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5"
   }
 }
