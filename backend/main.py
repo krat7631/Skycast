@@ -1,71 +1,58 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
-import joblib
-import pandas as pd
+"""Skycast API.
+
+Run from backend/:  uvicorn main:app --reload --port 8000
+"""
+
+import json
 import os
-import traceback
+from pathlib import Path
 
-from fetch_data import fetch_forecast_data
-from train_weather_model import train_model
-
-# CORS for frontend API calls
+import httpx
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
+from skycast.openmeteo import Location, LocationNotFound, geocode
+from skycast.service import forecast
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+REPORT = Path(__file__).parent / "reports" / "backtest.json"
+ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",") if o.strip()]
 
-# Forecast input schema
-class ForecastRequest(BaseModel):
-    year: int
-    month: int
-    day: int
-    city: str
-    state: str = ""  # ✅ state is now optional (default empty)
-    country: str
+app = FastAPI(title="Skycast", version="2.0.0")
+app.add_middleware(CORSMiddleware, allow_origins=ALLOWED_ORIGINS, allow_methods=["GET"], allow_headers=["*"])
 
-@app.post("/forecast/")
-def get_forecast(request: ForecastRequest):
-    city_clean = request.city.replace(" ", "_")
-    country_clean = request.country.replace(" ", "_")
-    model_path = f"models/{city_clean}_{country_clean}_weather_model.pkl"
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+@app.get("/places")
+def places(q: str = Query(..., min_length=2, max_length=80)):
     try:
-        if not os.path.exists(model_path):
-            print(f"⚠ Model for {request.city}, {request.country} not found. Auto-generating...")
+        return [loc.as_dict() for loc in geocode(q)]
+    except LocationNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail="Geocoding service unavailable.") from exc
 
-            # Fetch data — pass state only if provided
-            fetch_forecast_data(request.city, request.state, request.country)
-            train_model(request.city, request.country)
 
-        model = joblib.load(model_path)
+@app.get("/forecast")
+def forecast_endpoint(
+    name: str = Query(..., max_length=80),
+    country: str = Query("", max_length=80),
+    latitude: float = Query(..., ge=-90, le=90),
+    longitude: float = Query(..., ge=-180, le=180),
+    timezone: str = Query("auto", max_length=64),
+):
+    location = Location(name=name, country=country, latitude=latitude, longitude=longitude, timezone=timezone)
+    try:
+        return forecast(location)
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail="Weather data service unavailable.") from exc
 
-        X_pred = pd.DataFrame([{
-            "year": request.year,
-            "month": request.month,
-            "day": request.day
-        }])
 
-        prediction = model.predict(X_pred)[0]
-
-        return {
-            "temperature_min": prediction[0],
-            "precipitation": prediction[1],
-            "wind_speed": prediction[2],
-            "cloud_cover": prediction[3]
-        }
-
-    except Exception as e:
-        print("❌ Error occurred:", str(e))
-        traceback.print_exc()
-        return {"error": f"Internal Server Error: {str(e)}"}
-
-@app.get("/")
-def root():
-    return {"message": "🌤 SkyCast Fully Automated API is running!"}
+@app.get("/backtest")
+def backtest_report():
+    if not REPORT.exists():
+        raise HTTPException(status_code=404, detail="Run scripts/run_backtests.py to generate the backtest report.")
+    return json.loads(REPORT.read_text())
