@@ -1,8 +1,6 @@
-fastapi
-uvicorn
-prophet
-pandas
-requests
-joblib
-pydantic
-python-multipart
+fastapi==0.156.1
+uvicorn==0.54.0
+httpx==0.28.1
+pandas==3.0.6
+numpy==2.4.6
+scikit-learn==1.9.1
